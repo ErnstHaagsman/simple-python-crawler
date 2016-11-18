@@ -54,15 +54,21 @@ async def handle_page(loop, session, url, depth_remaining):
             yield urljoin(url, image)
 
 
-async def crawl(loop, url, depth):
+async def crawl(loop, url, depth, max_links):
     logging.info(f'Parsing {url} for {depth} level(s)')
 
     # run checklink to add initial page to the crawled pages list
     check_link(url, url)
 
+    # start counter for the amount of image links we find
+    found_links = 0
+
     async with aiohttp.ClientSession(loop=loop) as session:
         async for img_url in handle_page(loop, session, url, depth):
+            found_links += 1
             print(img_url)
+            if found_links >= max_links:
+                break
 
 
 def main():
@@ -70,6 +76,8 @@ def main():
     parser.add_argument('url', metavar='URL', help='The URL to crawl')
     parser.add_argument('--depth', dest='depth', type=int, default=1,
                         help='How many levels of links should be followed')
+    parser.add_argument('--max-links', dest='max_links', type=int, default=1_000,
+                        help='How many image links should be returned')
     parser.add_argument('--debug', dest='debug', action='store_const', const=True, default=False,
                         help='Should debug messages be printed')
     arguments = parser.parse_args()
@@ -80,7 +88,7 @@ def main():
 
     # start crawling async
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl(loop, arguments.url, arguments.depth))
+    loop.run_until_complete(crawl(loop, arguments.url, arguments.depth, arguments.max_links))
 
 
 if __name__ == '__main__':
