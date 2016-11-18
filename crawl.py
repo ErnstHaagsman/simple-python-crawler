@@ -3,6 +3,7 @@ import asyncio
 from urllib.parse import urljoin, urlsplit
 
 import aiohttp
+import logging
 from bs4 import BeautifulSoup
 
 
@@ -29,7 +30,8 @@ def check_link(from_url, to_url):
 
 
 async def handle_page(loop, session, url, depth_remaining):
-    print('Getting {}'.format(url))
+    logging.info('Getting {}'.format(url))
+
     # get page
     async with session.get(url) as response:
         # get the page
@@ -53,7 +55,7 @@ async def handle_page(loop, session, url, depth_remaining):
 
 
 async def crawl(loop, url, depth):
-    print('Parsing {} for {} level(s)'.format(url, depth))
+    logging.info('Parsing {} for {} level(s)'.format(url, depth))
 
     # run checklink to add initial page to the crawled pages list
     check_link(url, url)
@@ -67,7 +69,13 @@ def main():
     parser.add_argument('url', metavar='URL', help='The URL to crawl')
     parser.add_argument('--depth', dest='depth', type=int, default=1,
                         help='How many levels of links should be followed')
+    parser.add_argument('--debug', dest='debug', action='store_const', const=True, default=False,
+                        help='Should debug messages be printed')
     arguments = parser.parse_args()
+
+
+    if arguments.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     # start crawling async
     loop = asyncio.get_event_loop()
