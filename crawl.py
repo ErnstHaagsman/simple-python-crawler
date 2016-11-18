@@ -1,6 +1,6 @@
 import argparse
 import asyncio
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, ParseResult
 
 import aiohttp
 import logging
@@ -13,7 +13,7 @@ _crawled_pages = []
 
 def check_link(from_url, to_url):
     # don't follow links out from the domain
-    parts = urlsplit(to_url)
+    parts: ParseResult = urlsplit(to_url)
     if parts.hostname and parts.hostname != urlsplit(from_url).hostname:
         return False
 
@@ -30,8 +30,7 @@ def check_link(from_url, to_url):
 
 
 async def handle_page(loop, session, url, depth_remaining):
-    logging.info('Getting {}'.format(url))
-
+    logging.info(f'Getting {url}')
     # get page
     async with session.get(url) as response:
         # get the page
@@ -55,7 +54,7 @@ async def handle_page(loop, session, url, depth_remaining):
 
 
 async def crawl(loop, url, depth):
-    logging.info('Parsing {} for {} level(s)'.format(url, depth))
+    logging.info(f'Parsing {url} for {depth} level(s)')
 
     # run checklink to add initial page to the crawled pages list
     check_link(url, url)
