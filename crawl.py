@@ -45,12 +45,13 @@ async def handle_page(loop, session, url, depth_remaining):
 
                 # check whether we want to follow the link
                 if check_link(url, new_url):
-                    await handle_page(loop, session, new_url, depth_remaining - 1)
+                    async for image_url in handle_page(loop, session, new_url, depth_remaining - 1):
+                        yield image_url
 
         # print image links
         images = [img.get('src') for img in soup.find_all('img', src=True)]
         for image in images:
-            print(urljoin(url, image))
+            yield urljoin(url, image)
 
 
 async def crawl(loop, url, depth):
@@ -60,7 +61,8 @@ async def crawl(loop, url, depth):
     check_link(url, url)
 
     async with aiohttp.ClientSession(loop=loop) as session:
-        await handle_page(loop, session, url, depth)
+        async for img_url in handle_page(loop, session, url, depth):
+            print(img_url)
 
 
 def main():
