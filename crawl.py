@@ -40,13 +40,10 @@ async def handle_page(loop, session, url, depth_remaining):
 
         # recurse if we have depth left
         if depth_remaining > 1:
-            links = [link.get('href') for link in soup.find_all('a')]
-            for link in links:
-                new_url = urljoin(url, link)
+            links = [urljoin(url, link.get('href')) for link in soup.find_all('a')]
+            checked_links = [link for link in links if check_link(url, link)]
 
-                # check whether we want to follow the link
-                if check_link(url, new_url):
-                    await handle_page(loop, session, new_url, depth_remaining - 1)
+            await asyncio.wait([handle_page(loop, session, link, depth_remaining -1) for link in checked_links])
 
         # print image links
         images = [img.get('src') for img in soup.find_all('img', src=True)]
