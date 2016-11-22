@@ -29,7 +29,7 @@ def check_link(from_url, to_url):
     return True
 
 
-async def handle_page(loop, session, url, depth_remaining):
+async def handle_page(loop, session, url, depth_remaining, results):
     logging.info('Getting {}'.format(url))
 
     # get page
@@ -43,12 +43,26 @@ async def handle_page(loop, session, url, depth_remaining):
             links = [urljoin(url, link.get('href')) for link in soup.find_all('a')]
             checked_links = [link for link in links if check_link(url, link)]
 
-            await asyncio.wait([handle_page(loop, session, link, depth_remaining -1) for link in checked_links])
+            await asyncio.wait([handle_page(loop, session, link, depth_remaining -1, results) for link in checked_links])
 
         # print image links
         images = [img.get('src') for img in soup.find_all('img', src=True)]
         for image in images:
-            print(urljoin(url, image))
+            await results.put(urljoin(url, image))
+
+
+async def iterate_with_timeout(queue, timeout):
+    while True:
+        try:
+            x = await asyncio.wait_for(queue.get(), timeout)
+            yield x
+        except asyncio.TimeoutError:
+            return
+
+
+async def print_results(queue):
+    async for result in iterate_with_timeout(queue, 3.0):
+        print(result)
 
 
 async def crawl(loop, url, depth):
@@ -56,9 +70,14 @@ async def crawl(loop, url, depth):
 
     # run checklink to add initial page to the crawled pages list
     check_link(url, url)
+    results = asyncio.Queue()
+
+    print_task = loop.create_task(print_results(results))
 
     async with aiohttp.ClientSession(loop=loop) as session:
-        await handle_page(loop, session, url, depth)
+        await handle_page(loop, session, url, depth, results)
+
+    await print_task
 
 
 def main():
